@@ -1,49 +1,46 @@
 import gulp from 'gulp';
-import del from 'del';
-import autoprefixer from 'autoprefixer';
+
+import htmlmin from 'gulp-htmlmin';
+import posthtml from 'gulp-posthtml';
 import include from 'posthtml-include';
-import browserSync from 'browser-sync';
-import plumber from 'gulp-plumber';
+
 import sass from 'gulp-sass';
 import postcss from 'gulp-postcss';
 import csso from 'gulp-csso';
-import posthtml from 'gulp-posthtml';
-import w3cjs from 'gulp-w3cjs';
+import autoprefixer from 'autoprefixer';
+import normalize from 'node-normalize-scss';
 
-import htmlmin from 'gulp-htmlmin';
+import del from 'del';
+import rename from 'gulp-rename';
+
+import webp from 'gulp-webp';
 import imagemin from 'gulp-imagemin';
+import imageminPngquant from 'imagemin-pngquant';
 import svgstore from 'gulp-svgstore';
 
-import rename from 'gulp-rename';
-import webp from 'gulp-webp';
-
-import sourcemaps from 'gulp-sourcemaps';
 import rollup from 'gulp-better-rollup';
 import babel from 'rollup-plugin-babel';
-import uglify from 'gulp-uglify';
 
-import normalize from 'node-normalize-scss';
-import rev from 'gulp-rev-append';
+import uglify from 'gulp-uglify';
+import nodeResolve from 'rollup-plugin-node-resolve';
+import commonjs from 'rollup-plugin-commonjs';
+import inject from 'rollup-plugin-inject';
+import sourcemaps from 'gulp-sourcemaps';
+
+import plumber from 'gulp-plumber';
+import browserSync from 'browser-sync';
 
 const server = browserSync.create();
-
-gulp.task('rev', () => gulp.src('build/*.html')
-  .pipe(rev())
-  .pipe(gulp.dest('build')));
 
 gulp.task('html', () => gulp.src('source/*.html')
   .pipe(posthtml([
     include(),
   ]))
-  .pipe(w3cjs())
   .pipe(htmlmin({
     collapseWhitespace: true,
     removeComments: true,
   }))
   .pipe(gulp.dest('build')));
-
-gulp.task('htmlValid', () => gulp.src('build/*.html')
-  .pipe(w3cjs()));
 
 gulp.task('css', () => gulp.src('source/sass/style.scss')
   .pipe(plumber())
@@ -67,27 +64,15 @@ gulp.task('clean', () => del('build'));
 
 gulp.task('copy', () => gulp.src([
   'source/fonts/**/*.{woff,woff2}',
-  'source/img/*',
+  'source/img/**/*',
   'source/js/lib/*',
   'source/pixelglass/**/*',
+  '!source/img/sprite/*',
   '!source/img/sprite',
-  '!source/img/original',
 ], {
   base: 'source',
 })
   .pipe(gulp.dest('build')));
-
-gulp.task('images', () => gulp.src('source/img/original/*.{png,jpg,svg}')
-  .pipe(imagemin([
-    imagemin.optipng({ optimizationLevel: 3 }),
-    imagemin.jpegtran({ progressive: true }),
-    imagemin.svgo({
-      plugins: [
-        { removeViewBox: false },
-      ],
-    }),
-  ]))
-  .pipe(gulp.dest('source/img')));
 
 gulp.task('sprite', () => gulp.src('source/img/sprite/*.svg')
   .pipe(svgstore({
@@ -96,14 +81,20 @@ gulp.task('sprite', () => gulp.src('source/img/sprite/*.svg')
   .pipe(rename('sprite.svg'))
   .pipe(gulp.dest('build/img')));
 
-gulp.task('webp', () => gulp.src('source/img/original/*.jpg')
-  .pipe(webp({ quality: 90 }))
-  .pipe(gulp.dest('source/img')));
-
 gulp.task('js', () => gulp.src('source/js/main.js')
+  .pipe(plumber())
   .pipe(sourcemaps.init())
   .pipe(rollup({
-    plugins: [babel()],
+    plugins: [
+      inject({
+        include: '**/*.js',
+        exclude: 'node_modules/**',
+        $: 'jquery',
+      }),
+      commonjs(),
+      nodeResolve(),
+      babel(),
+    ],
   }, {
     format: 'iife',
   }))
@@ -117,13 +108,9 @@ gulp.task('server', () => {
   });
 
   gulp.watch('source/sass/**/*.{scss,sass}', gulp.series('css', 'refresh'));
-  gulp.watch('source/img/sprite/*.svg', gulp.series('sprite', 'html', 'refresh'));
   gulp.watch('source/*.html', gulp.series('html', 'refresh'));
-  gulp.watch('source/img/*', gulp.series('copy', 'refresh'));
-  gulp.watch('source/img/original', gulp.series('images', 'webp', 'refresh'));
-  gulp.watch('source/js/lib.js', gulp.series('copy', 'refresh'));
-  gulp.watch('source/js/*.js', gulp.series('js', 'refresh'));
-  gulp.watch('source/js/*', gulp.series('copy', 'refresh'));
+  gulp.watch('source/img/**/*', gulp.series('copy', 'sprite', 'html', 'refresh'));
+  gulp.watch('source/js/**/*', gulp.series('js', 'refresh'));
 });
 
 gulp.task('refresh', (done) => {
@@ -159,3 +146,31 @@ gulp.task('start', gulp.series(
   ),
   'server',
 ));
+
+
+// Таски для отпимизации изображений, использование через - npx gulp webp *taskname*
+gulp.task('webp', () => gulp.src('build/img/**/*.jpg')
+  .pipe(webp({ quality: 90 }))
+  .pipe(gulp.dest('build/img')));
+
+gulp.task('images', () => gulp.src('build/img/**/*.{png,jpg,svg}')
+  .pipe(imagemin([
+    imageminPngquant({ quality: [0.6, 0.8] }),
+    imagemin.jpegtran({ progressive: true }),
+    imagemin.svgo({
+      plugins: [
+        { removeViewBox: false },
+      ],
+    }),
+  ]))
+  .pipe(gulp.dest('build/img')));
+
+gulp.task('svg', () => gulp.src('build/img/**/*.svg')
+  .pipe(imagemin([
+    imagemin.svgo({
+      plugins: [
+        { removeViewBox: false },
+      ],
+    }),
+  ]))
+  .pipe(gulp.dest('build/img')));

@@ -1,7 +1,10 @@
 env:
-  es6: true
+  es6: true,
+  jquery: true
+  browser: true,
 extends: airbnb-base
 globals:
+  window: true
   Atomics: readonly
   SharedArrayBuffer: readonly
 parserOptions:
