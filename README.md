@@ -9,7 +9,7 @@
 	+ Stylelint
 	+ Autoprefixer
 	+ Включает в себя Normalize
-+ Java script:
++ Javascript:
 	+ Сборка кода в один бандл с gulp-rollup
 	+ Babel транспайлер, для поддержки синтаксиса es6, включая import/export
 	+ Babel/polyfill, для методов не поддерживаемых в старых браузерах 
