@@ -9,9 +9,9 @@
 	+ Stylelint
 	+ Autoprefixer
 	+ Включает в себя Normalize
-+ Java script:
++ Java script: 
 	+ Webpack
-  + Babel
+	+ Babel
 	+ Eslint + airbnb config
 + Графика: 
 	+ Сборка свг изображений в векторный спрайт с последующим использованием в разметке.
