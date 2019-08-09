@@ -1,3 +1,5 @@
+
+import webpack from 'webpack-stream';
 import gulp from 'gulp';
 
 import htmlmin from 'gulp-htmlmin';
@@ -18,17 +20,9 @@ import imagemin from 'gulp-imagemin';
 import imageminPngquant from 'imagemin-pngquant';
 import svgstore from 'gulp-svgstore';
 
-import rollup from 'gulp-better-rollup';
-import babel from 'rollup-plugin-babel';
-
-import uglify from 'gulp-uglify';
-import nodeResolve from 'rollup-plugin-node-resolve';
-import commonjs from 'rollup-plugin-commonjs';
-import inject from 'rollup-plugin-inject';
-import sourcemaps from 'gulp-sourcemaps';
-
 import plumber from 'gulp-plumber';
 import browserSync from 'browser-sync';
+import webpackConfig from './webpack.config';
 
 const server = browserSync.create();
 
@@ -52,7 +46,6 @@ gulp.task('css', () => gulp.src('source/sass/style.scss')
       browsers: [
         'last 2 versions',
         'IE 11',
-        'Firefox ESR',
       ],
     }),
   ]))
@@ -81,25 +74,8 @@ gulp.task('sprite', () => gulp.src('source/img/sprite/*.svg')
   .pipe(rename('sprite.svg'))
   .pipe(gulp.dest('build/img')));
 
-gulp.task('js', () => gulp.src('source/js/main.js')
-  .pipe(plumber())
-  .pipe(sourcemaps.init())
-  .pipe(rollup({
-    plugins: [
-      inject({
-        include: '**/*.js',
-        exclude: 'node_modules/**',
-        $: 'jquery',
-      }),
-      commonjs(),
-      nodeResolve(),
-      babel(),
-    ],
-  }, {
-    format: 'iife',
-  }))
-  .pipe(uglify())
-  .pipe(sourcemaps.write('.'))
+gulp.task('js', () => gulp.src('source/js/index.js')
+  .pipe(webpack(webpackConfig))
   .pipe(gulp.dest('build/js')));
 
 gulp.task('server', () => {
